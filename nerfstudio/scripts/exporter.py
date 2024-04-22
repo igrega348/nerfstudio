@@ -31,18 +31,27 @@ import numpy as np
 import open3d as o3d
 import torch
 import tyro
+from rich.progress import track
+from torch.utils.data import DataLoader, TensorDataset
 from typing_extensions import Annotated, Literal
 
 from nerfstudio.cameras.rays import RayBundle
 from nerfstudio.data.datamanagers.base_datamanager import VanillaDataManager
-from nerfstudio.data.datamanagers.full_images_datamanager import FullImageDatamanager
-from nerfstudio.data.datamanagers.parallel_datamanager import ParallelDataManager
-from nerfstudio.data.datamanagers.random_cameras_datamanager import RandomCamerasDataManager
+from nerfstudio.data.datamanagers.full_images_datamanager import \
+    FullImageDatamanager
+from nerfstudio.data.datamanagers.parallel_datamanager import \
+    ParallelDataManager
+from nerfstudio.data.datamanagers.random_cameras_datamanager import \
+    RandomCamerasDataManager
 from nerfstudio.data.scene_box import OrientedBox
 from nerfstudio.exporter import texture_utils, tsdf_utils
-from nerfstudio.exporter.exporter_utils import collect_camera_poses, generate_point_cloud, get_mesh_from_filename
-from nerfstudio.exporter.marching_cubes import generate_mesh_with_multires_marching_cubes
+from nerfstudio.exporter.exporter_utils import (collect_camera_poses,
+                                                generate_point_cloud,
+                                                get_mesh_from_filename)
+from nerfstudio.exporter.marching_cubes import \
+    generate_mesh_with_multires_marching_cubes
 from nerfstudio.fields.sdf_field import SDFField  # noqa
+from nerfstudio.models.base_model import Model
 from nerfstudio.models.splatfacto import SplatfactoModel
 from nerfstudio.pipelines.base_pipeline import Pipeline, VanillaPipeline
 from nerfstudio.utils.eval_utils import eval_setup
@@ -603,6 +612,59 @@ class ExportGaussianSplat(Exporter):
 
         ExportGaussianSplat.write_ply(str(filename), count, map_to_tensors)
 
+@dataclass
+class ExportRawMhd(Exporter):
+    """Export as binary raw with MHD descriptor"""
+    resolution: int = 512
+    """Resolution of the volume. Same in all dimensions."""
+
+    def main(self) -> None:
+        if not self.output_dir.exists():
+            self.output_dir.mkdir(parents=True)
+
+        _, pipeline, _, _ = eval_setup(self.load_config)
+
+        model: Model = pipeline.model
+        model.eval()
+
+        filename = self.output_dir / "volume.raw"
+        mhd_filename = self.output_dir / "volume.raw.mhd"
+
+        assert hasattr(model.field, "get_density_from_pos")
+
+        with torch.no_grad():
+            x = torch.linspace(0, 1, self.resolution, device=model.device)
+            y = torch.linspace(0, 1, self.resolution, device=model.device)
+            z = torch.linspace(0, 1, self.resolution, device=model.device)
+            X, Y, Z = torch.meshgrid(x, y, z, indexing="ij")
+            positions = torch.stack([X, Y, Z], dim=-1).reshape(-1, 3)
+            dataset = TensorDataset(positions)
+            dataloader = DataLoader(dataset, batch_size=1024*128, shuffle=False)
+            densities = []
+            for batch in track(dataloader, description="Computing densities"):
+                densities.append(model.field.get_density_from_pos(batch[0]).cpu().numpy())
+            densities = np.concatenate(densities, axis=0).squeeze()
+            densities = densities.astype(np.float16).reshape(self.resolution, self.resolution, self.resolution)
+        
+        densities.swapaxes(0,2).tofile(filename)
+        offset = [0.5, 0.5, 0.5]
+        elementSpacing = [1, 1, 1]
+        mhdContent = f"""ObjectType = Image
+NDims = 3
+BinaryData = True
+BinaryDataByteOrderMSB = False
+CompressedData = False
+TransformMatrix = 1 0 0 0 1 0 0 0 1 
+Offset = {' '.join(map(str, offset)) if offset else '0.5 0.5 0.5'}
+CenterOfRotation = 0 0 0
+ElementSpacing = {' '.join(map(str, elementSpacing)) if offset else '1 1 1'}
+DimSize = {self.resolution} {self.resolution} {self.resolution}
+AnatomicalOrientation = ??
+ElementType = MET_FLOAT
+ElementDataFile = {os.path.basename(filename)}"""
+
+        Path(mhd_filename).write_text(mhdContent)
+
 
 Commands = tyro.conf.FlagConversionOff[
     Union[
@@ -612,6 +674,7 @@ Commands = tyro.conf.FlagConversionOff[
         Annotated[ExportMarchingCubesMesh, tyro.conf.subcommand(name="marching-cubes")],
         Annotated[ExportCameraPoses, tyro.conf.subcommand(name="cameras")],
         Annotated[ExportGaussianSplat, tyro.conf.subcommand(name="gaussian-splat")],
+        Annotated[ExportRawMhd, tyro.conf.subcommand(name="raw-mhd")],
     ]
 ]
 
