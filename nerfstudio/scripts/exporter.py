@@ -617,8 +617,12 @@ class ExportRawMhd(Exporter):
     """Export as binary raw with MHD descriptor"""
     resolution: int = 512
     """Resolution of the volume. Same in all dimensions."""
+    export_dtype: Literal["uint8", "uint16", "float32"] = "uint8"
+    """Data type to export the volume as."""
 
     def main(self) -> None:
+        dtypes = {"uint8": {"dtype": np.uint8, "met": "MET_UCHAR"}, "uint16": {"dtype": np.uint16, "met": "MET_USHORT"}, "float32": {"dtype": np.float32, "met": "MET_FLOAT"}}
+
         if not self.output_dir.exists():
             self.output_dir.mkdir(parents=True)
 
@@ -644,7 +648,8 @@ class ExportRawMhd(Exporter):
             for batch in track(dataloader, description="Computing densities"):
                 densities.append(model.field.get_density_from_pos(batch[0]).cpu().numpy())
             densities = np.concatenate(densities, axis=0).squeeze()
-            densities = densities.astype(np.float16).reshape(self.resolution, self.resolution, self.resolution)
+            densities *= (np.iinfo(dtypes[self.export_dtype]["dtype"]).max / densities.max())
+            densities = densities.astype(np.uint8).reshape(self.resolution, self.resolution, self.resolution)
         
         densities.swapaxes(0,2).tofile(filename)
         offset = [0.5, 0.5, 0.5]
@@ -660,7 +665,7 @@ CenterOfRotation = 0 0 0
 ElementSpacing = {' '.join(map(str, elementSpacing)) if offset else '1 1 1'}
 DimSize = {self.resolution} {self.resolution} {self.resolution}
 AnatomicalOrientation = ??
-ElementType = MET_FLOAT
+ElementType = {dtypes[self.export_dtype]["met"]}
 ElementDataFile = {os.path.basename(filename)}"""
 
         Path(mhd_filename).write_text(mhdContent)
