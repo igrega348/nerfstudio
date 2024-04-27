@@ -670,6 +670,34 @@ ElementDataFile = {os.path.basename(filename)}"""
 
         Path(mhd_filename).write_text(mhdContent)
 
+@dataclass
+class ExportImageStack(Exporter):
+    """Export image stack."""
+    resolution: int = 512
+    """Lateral resolution of the images."""
+    num_slices: int = 64
+    """Number of slices."""
+    plot_engine: Literal["matplotlib", "opencv"] = "matplotlib"
+    """Plotting engine to use."""
+
+    def main(self) -> None:
+        if not self.output_dir.exists():
+            self.output_dir.mkdir(parents=True)
+
+        _, pipeline, _, _ = eval_setup(self.load_config)
+
+        model: Model = pipeline.model
+        model.eval()
+
+        assert hasattr(model.field, "get_density_from_pos")
+
+        distances = np.linspace(0, 1, self.num_slices)
+        for i_slice in track(range(self.num_slices), description="Exporting image stack"):
+            fn = self.output_dir / f"image_{i_slice:04d}.png"
+            pipeline.eval_along_plane(
+                plane='xy', distance=distances[i_slice], fn=fn, engine=self.plot_engine, resolution=self.resolution
+            )
+            
 
 Commands = tyro.conf.FlagConversionOff[
     Union[
@@ -680,6 +708,7 @@ Commands = tyro.conf.FlagConversionOff[
         Annotated[ExportCameraPoses, tyro.conf.subcommand(name="cameras")],
         Annotated[ExportGaussianSplat, tyro.conf.subcommand(name="gaussian-splat")],
         Annotated[ExportRawMhd, tyro.conf.subcommand(name="raw-mhd")],
+        Annotated[ExportImageStack, tyro.conf.subcommand(name="image-stack")],
     ]
 ]
 
