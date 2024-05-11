@@ -27,6 +27,58 @@
       "justMyCode": true
     },
     {
+      "name": "Python: train nerfacto",
+      "type": "python",
+      "request": "launch",
+      "program": "nerfstudio/scripts/train.py",
+      "console": "integratedTerminal",
+      "args": [
+        "nerfacto",
+        "--data", "C:/Users/ig348/Documents/sphere_render/"
+      ]
+    },
+    {
+      "name": "Python: train newmethod",
+      "type": "python",
+      "request": "launch",
+      "program": "nerfstudio/scripts/train.py",
+      "console": "integratedTerminal",
+      "args": [
+        "method-template",
+        "--data", "C:/Users/ig348/Documents/sphere_render/",
+      ]
+    },
+    {
+      "name": "Python: train xray",
+      "type": "python",
+      "request": "launch",
+      "program": "nerfstudio/scripts/train.py",
+      "console": "integratedTerminal",
+      "args": [
+        "nerf_bspline",
+        "--vis", "viewer",
+        "--data", "C:/Users/ig348/Documents/nerf_data/synthetic/bspline/transforms_ddd.json",
+        "--max-num-iterations", "100",
+        // "--pipeline.load_density_ckpt", "C:/Users/ig348/Documents/nerfstudio/outputs/bspline/nerf_bspline/2024-05-11_102212/nerfstudio_models/step-000000499.ckpt",
+        // "--pipeline.model.train_density_field", "False",
+        // "--pipeline.model.train_deformation_field", "True",
+        "xray-temp-dataparser", 
+      ]
+    },
+    {
+      "name": "Python: try exporter",
+      "type": "python",
+      "request": "launch",
+      "program": "nerfstudio/scripts/exporter.py",
+      "console": "integratedTerminal",
+      "args": [
+        "raw-mhd",
+        "--load-config", "./outputs/balls/method-template/2024-04-21_232842/config.yml",
+        "--output-dir", "./outputs/balls/method-template/2024-04-21_232842/",
+        "--resolution", "64"
+      ]
+    },
+    {
       "name": "Python: train",
       "type": "python",
       "request": "launch",

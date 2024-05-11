@@ -695,6 +695,8 @@ class ExportImageStack(Exporter):
     """Number of slices."""
     plot_engine: Literal["matplotlib", "opencv"] = "matplotlib"
     """Plotting engine to use."""
+    plane: Literal["xy", "xz", "yz"] = "xy"
+    """Plane along which to slice."""
 
     def main(self) -> None:
         if not self.output_dir.exists():
@@ -711,7 +713,7 @@ class ExportImageStack(Exporter):
         for i_slice in track(range(self.num_slices), description="Exporting image stack"):
             fn = self.output_dir / f"image_{i_slice:04d}.png"
             pipeline.eval_along_plane(
-                plane='xy', distance=distances[i_slice], fn=fn, engine=self.plot_engine, resolution=self.resolution
+                plane=self.plane, distance=distances[i_slice], fn=fn, engine=self.plot_engine, resolution=self.resolution
             )
             
 
