@@ -693,7 +693,7 @@ class ExportImageStack(Exporter):
     """Lateral resolution of the images."""
     num_slices: int = 64
     """Number of slices."""
-    plot_engine: Literal["matplotlib", "opencv"] = "matplotlib"
+    plot_engine: Literal["matplotlib", "opencv"] = "opencv"
     """Plotting engine to use."""
     plane: Literal["xy", "xz", "yz"] = "xy"
     """Plane along which to slice."""
