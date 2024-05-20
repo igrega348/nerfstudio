@@ -709,7 +709,7 @@ class ExportImageStack(Exporter):
 
         assert hasattr(model.field, "get_density_from_pos")
 
-        distances = np.linspace(0, 1, self.num_slices)
+        distances = np.linspace(-1, 1, self.num_slices)
         for i_slice in track(range(self.num_slices), description="Exporting image stack"):
             fn = self.output_dir / f"image_{i_slice:04d}.png"
             pipeline.eval_along_plane(
