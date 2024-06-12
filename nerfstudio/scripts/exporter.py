@@ -26,7 +26,7 @@ import typing
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, Tuple, Union, cast
+from typing import List, Optional, Tuple, Union, cast, Callable
 
 import numpy as np
 import open3d as o3d
@@ -715,7 +715,47 @@ class ExportImageStack(Exporter):
             pipeline.eval_along_plane(
                 plane=self.plane, distance=distances[i_slice], fn=fn, engine=self.plot_engine, resolution=self.resolution
             )
-            
+
+@dataclass
+class ExportDeformationField(Exporter):
+    """Export deformation field."""
+    resolution: int = 256
+    """Resolution of spatial grid."""
+
+    def main(self) -> None:
+        if not self.output_dir.exists():
+            self.output_dir.mkdir(parents=True)
+
+        _, pipeline, _, _ = eval_setup(self.load_config)
+
+        model: Model = pipeline.model
+        model.eval()
+
+        assert hasattr(model, "deformation_field")
+        assert isinstance(model.deformation_field, Callable)
+
+        x = torch.linspace(-1, 1, self.resolution, device=model.device)
+        X,Y,Z = torch.meshgrid(x,x,x, indexing='ij')
+        pos = torch.stack([X.flatten(), Y.flatten(), Z.flatten()], dim=1)
+        pos_dataset = TensorDataset(pos)
+        dataloader = DataLoader(pos_dataset, batch_size=1024*1024, shuffle=False)
+
+        t = torch.linspace(0,1,11, device=model.device).view(-1,1)
+        for ti in t:
+            fn = self.output_dir / f"deformation_t_{ti.item():.2f}.npy"
+
+            displacements = []
+            for batch in track(dataloader, description=f"Computing deformations at t={ti.item()}"):
+                pos1 = batch[0].clone()
+                with torch.no_grad():
+                    pos1 = model.deformation_field(pos1, ti)
+                u = pos1 - batch[0]
+                u = u.cpu().numpy()
+                displacements.append(u)
+            displacements = np.concatenate(displacements, axis=0).squeeze()
+            np.save(fn, displacements)
+
+
 
 Commands = tyro.conf.FlagConversionOff[
     Union[
@@ -727,6 +767,7 @@ Commands = tyro.conf.FlagConversionOff[
         Annotated[ExportGaussianSplat, tyro.conf.subcommand(name="gaussian-splat")],
         Annotated[ExportRawMhd, tyro.conf.subcommand(name="raw-mhd")],
         Annotated[ExportImageStack, tyro.conf.subcommand(name="image-stack")],
+        Annotated[ExportDeformationField, tyro.conf.subcommand(name="deformation-field")]
     ]
 ]
 
