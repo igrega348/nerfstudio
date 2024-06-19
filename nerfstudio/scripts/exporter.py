@@ -630,7 +630,7 @@ class ExportGaussianSplat(Exporter):
 
 @dataclass
 class ExportRawMhd(Exporter):
-    """Export as binary raw with MHD descriptor"""
+    """Export as binary raw with MHD descriptor and numpy file."""
     resolution: int = 512
     """Resolution of the volume. Same in all dimensions."""
     export_dtype: Literal["uint8", "uint16", "float32"] = "uint8"
@@ -653,9 +653,9 @@ class ExportRawMhd(Exporter):
         assert hasattr(model.field, "get_density_from_pos")
 
         with torch.no_grad():
-            x = torch.linspace(0, 1, self.resolution, device=model.device)
-            y = torch.linspace(0, 1, self.resolution, device=model.device)
-            z = torch.linspace(0, 1, self.resolution, device=model.device)
+            x = torch.linspace(-1, 1, self.resolution, device=model.device)
+            y = torch.linspace(-1, 1, self.resolution, device=model.device)
+            z = torch.linspace(-1, 1, self.resolution, device=model.device)
             X, Y, Z = torch.meshgrid(x, y, z, indexing="ij")
             positions = torch.stack([X, Y, Z], dim=-1).reshape(-1, 3)
             dataset = TensorDataset(positions)
@@ -668,6 +668,7 @@ class ExportRawMhd(Exporter):
             densities = densities.astype(np.uint8).reshape(self.resolution, self.resolution, self.resolution)
         
         densities.swapaxes(0,2).tofile(filename)
+        np.save(filename.with_suffix('.npy'), densities)
         offset = [0.5, 0.5, 0.5]
         elementSpacing = [1, 1, 1]
         mhdContent = f"""ObjectType = Image
