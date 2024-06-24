@@ -652,20 +652,18 @@ class ExportRawMhd(Exporter):
 
         assert hasattr(model.field, "get_density_from_pos")
 
-        with torch.no_grad():
-            x = torch.linspace(-1, 1, self.resolution, device=model.device)
-            y = torch.linspace(-1, 1, self.resolution, device=model.device)
-            z = torch.linspace(-1, 1, self.resolution, device=model.device)
-            X, Y, Z = torch.meshgrid(x, y, z, indexing="ij")
-            positions = torch.stack([X, Y, Z], dim=-1).reshape(-1, 3)
-            dataset = TensorDataset(positions)
-            dataloader = DataLoader(dataset, batch_size=1024*128, shuffle=False)
-            densities = []
-            for batch in track(dataloader, description="Computing densities"):
-                densities.append(model.field.get_density_from_pos(batch[0]).cpu().numpy())
-            densities = np.concatenate(densities, axis=0).squeeze()
-            densities *= (np.iinfo(dtypes[self.export_dtype]["dtype"]).max / densities.max())
-            densities = densities.astype(np.uint8).reshape(self.resolution, self.resolution, self.resolution)
+        densities = []
+        distances = np.linspace(-1, 1, self.resolution)
+        for i_slice in track(range(self.resolution), description="Assembling volume slices"):
+            xy = pipeline.eval_along_plane(
+                plane='xy', distance=distances[i_slice], engine='numpy', resolution=self.resolution
+            )
+            densities.append(xy.squeeze())
+        densities = np.stack(densities, axis=2)
+        densities *= (np.iinfo(dtypes[self.export_dtype]["dtype"]).max / densities.max())
+        densities = densities.astype(dtypes[self.export_dtype]["dtype"])
+        print(f"Exporting volume with shape {densities.shape} and dtype {densities.dtype}")
+        assert densities.shape == (self.resolution, self.resolution, self.resolution)
         
         densities.swapaxes(0,2).tofile(filename)
         np.save(filename.with_suffix('.npy'), densities)
@@ -698,6 +696,10 @@ class ExportImageStack(Exporter):
     """Plotting engine to use."""
     plane: Literal["xy", "xz", "yz"] = "xy"
     """Plane along which to slice."""
+    target: Literal["field", "datamanager", "both"] = "field"
+    """Target to plot. Either 'field', 'datamanager', or 'both'."""
+    max_density: float = 1.0
+    """Maximum density for the colormap."""
 
     def main(self) -> None:
         if not self.output_dir.exists():
@@ -714,7 +716,13 @@ class ExportImageStack(Exporter):
         for i_slice in track(range(self.num_slices), description="Exporting image stack"):
             fn = self.output_dir / f"image_{i_slice:04d}.png"
             pipeline.eval_along_plane(
-                plane=self.plane, distance=distances[i_slice], fn=fn, engine=self.plot_engine, resolution=self.resolution
+                target=self.target,
+                plane=self.plane, 
+                distance=distances[i_slice], 
+                fn=fn, 
+                engine=self.plot_engine, 
+                resolution=self.resolution,
+                rhomax=self.max_density
             )
 
 @dataclass
