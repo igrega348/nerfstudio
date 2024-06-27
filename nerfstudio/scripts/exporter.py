@@ -629,12 +629,14 @@ class ExportGaussianSplat(Exporter):
         ExportGaussianSplat.write_ply(str(filename), count, map_to_tensors)
 
 @dataclass
-class ExportRawMhd(Exporter):
+class ExportVolumeGrid(Exporter):
     """Export as binary raw with MHD descriptor and numpy file."""
     resolution: int = 512
     """Resolution of the volume. Same in all dimensions."""
     export_dtype: Literal["uint8", "uint16", "float32"] = "uint8"
     """Data type to export the volume as."""
+    fmt: Literal["raw", "npy", "npz"] = "npz"
+    """Format to export the volume as."""
 
     def main(self) -> None:
         dtypes = {"uint8": {"dtype": np.uint8, "met": "MET_UCHAR"}, "uint16": {"dtype": np.uint16, "met": "MET_USHORT"}, "float32": {"dtype": np.float32, "met": "MET_FLOAT"}}
@@ -656,7 +658,7 @@ class ExportRawMhd(Exporter):
         distances = np.linspace(-1, 1, self.resolution)
         for i_slice in track(range(self.resolution), description="Assembling volume slices"):
             xy = pipeline.eval_along_plane(
-                plane='xy', distance=distances[i_slice], engine='numpy', resolution=self.resolution
+                plane='xy', distance=distances[i_slice], engine='numpy', resolution=self.resolution, target='field'
             )
             densities.append(xy.squeeze())
         densities = np.stack(densities, axis=2)
@@ -665,8 +667,18 @@ class ExportRawMhd(Exporter):
         print(f"Exporting volume with shape {densities.shape} and dtype {densities.dtype}")
         assert densities.shape == (self.resolution, self.resolution, self.resolution)
         
+        if self.fmt=="npz":
+            np.savez(filename.with_suffix('.npz'), vol=densities)
+            return
+        elif self.fmt=="npy":
+            np.save(filename.with_suffix('.npy'), densities)
+            return
+        elif self.fmt=="raw":
+            pass
+        else:
+            raise ValueError(f"Unknown format {self.fmt}")
+        # raw
         densities.swapaxes(0,2).tofile(filename)
-        np.save(filename.with_suffix('.npy'), densities)
         offset = [0.5, 0.5, 0.5]
         elementSpacing = [1, 1, 1]
         mhdContent = f"""ObjectType = Image
@@ -774,7 +786,7 @@ Commands = tyro.conf.FlagConversionOff[
         Annotated[ExportMarchingCubesMesh, tyro.conf.subcommand(name="marching-cubes")],
         Annotated[ExportCameraPoses, tyro.conf.subcommand(name="cameras")],
         Annotated[ExportGaussianSplat, tyro.conf.subcommand(name="gaussian-splat")],
-        Annotated[ExportRawMhd, tyro.conf.subcommand(name="raw-mhd")],
+        Annotated[ExportVolumeGrid, tyro.conf.subcommand(name="volume-grid")],
         Annotated[ExportImageStack, tyro.conf.subcommand(name="image-stack")],
         Annotated[ExportDeformationField, tyro.conf.subcommand(name="deformation-field")]
     ]
