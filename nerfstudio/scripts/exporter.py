@@ -637,6 +637,8 @@ class ExportVolumeGrid(Exporter):
     """Data type to export the volume as."""
     fmt: Literal["raw", "npy", "npz"] = "npz"
     """Format to export the volume as."""
+    time: Optional[float] = 0.0
+    """Time to evaluate the field at. Useful if deformation is time-dependent."""
 
     def main(self) -> None:
         dtypes = {"uint8": {"dtype": np.uint8, "met": "MET_UCHAR"}, "uint16": {"dtype": np.uint16, "met": "MET_USHORT"}, "float32": {"dtype": np.float32, "met": "MET_FLOAT"}}
@@ -658,7 +660,11 @@ class ExportVolumeGrid(Exporter):
         distances = np.linspace(-1, 1, self.resolution)
         for i_slice in track(range(self.resolution), description="Assembling volume slices"):
             xy = pipeline.eval_along_plane(
-                plane='xy', distance=distances[i_slice], engine='numpy', resolution=self.resolution, target='field'
+                plane='xy', distance=distances[i_slice], 
+                engine='numpy', 
+                resolution=self.resolution, 
+                target='field',
+                time=self.time
             )
             densities.append(xy.squeeze())
         densities = np.stack(densities, axis=2)
