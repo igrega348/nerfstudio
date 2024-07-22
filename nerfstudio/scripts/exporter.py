@@ -718,6 +718,8 @@ class ExportImageStack(Exporter):
     """Target to plot. Either 'field', 'datamanager', or 'both'."""
     max_density: float = 1.0
     """Maximum density for the colormap."""
+    time: Optional[float] = 0.0
+    """Time to evaluate the field at. Useful if deformation is time-dependent."""
 
     def main(self) -> None:
         if not self.output_dir.exists():
@@ -740,7 +742,8 @@ class ExportImageStack(Exporter):
                 fn=fn, 
                 engine=self.plot_engine, 
                 resolution=self.resolution,
-                rhomax=self.max_density
+                rhomax=self.max_density,
+                time=self.time
             )
 
 @dataclass
