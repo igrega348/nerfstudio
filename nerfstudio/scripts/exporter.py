@@ -637,6 +637,8 @@ class ExportVolumeGrid(Exporter):
     """Data type to export the volume as."""
     fmt: Literal["raw", "npy", "npz"] = "npz"
     """Format to export the volume as."""
+    target: Literal["field", "datamanager", "both"] = "field"
+    """Target to plot. Either 'field', 'datamanager', or 'both'."""
     time: Optional[float] = 0.0
     """Time to evaluate the field at. Useful if deformation is time-dependent."""
 
@@ -663,7 +665,7 @@ class ExportVolumeGrid(Exporter):
                 plane='xy', distance=distances[i_slice], 
                 engine='numpy', 
                 resolution=self.resolution, 
-                target='field',
+                target=self.target,
                 time=self.time
             )
             densities.append(xy.squeeze())
