@@ -75,6 +75,8 @@ class ExperimentConfig(InstantiateConfig):
     """Relative path to save all checkpoints."""
     load_scheduler: bool = True
     """Whether to load the scheduler state_dict to resume training, if it exists."""
+    load_optimizer: bool = True
+    """Whether to load the optimizer state_dict to resume training."""
 
     def is_viewer_legacy_enabled(self) -> bool:
         """Checks if the legacy viewer is enabled."""
