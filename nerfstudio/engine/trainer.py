@@ -446,7 +446,8 @@ class Trainer:
                 self.optimizers.load_optimizers(loaded_state["optimizers"])
             if "schedulers" in loaded_state and self.config.load_scheduler:
                 self.optimizers.load_schedulers(loaded_state["schedulers"])
-            self.grad_scaler.load_state_dict(loaded_state["scalers"])
+            if "scalers" in loaded_state:
+                self.grad_scaler.load_state_dict(loaded_state["scalers"])
             CONSOLE.print(f"Done loading Nerfstudio checkpoint from {load_checkpoint}")
         else:
             CONSOLE.print("No Nerfstudio checkpoint to load, so training from scratch.")
