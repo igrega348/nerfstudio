@@ -656,7 +656,7 @@ class ExportVolumeGrid(Exporter):
         filename = self.output_dir / "volume.raw"
         mhd_filename = self.output_dir / "volume.raw.mhd"
 
-        assert hasattr(model.field, "get_density_from_pos")
+        # assert hasattr(model.field, "get_density_from_pos")
 
         densities = []
         distances = np.linspace(-1, 1, self.resolution)
