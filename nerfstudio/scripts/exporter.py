@@ -641,6 +641,8 @@ class ExportVolumeGrid(Exporter):
     """Target to plot. Either 'field', 'datamanager', or 'both'."""
     time: Optional[float] = 0.0
     """Time to evaluate the field at. Useful if deformation is time-dependent."""
+    which: Optional[Literal['forward','backward','mixed']] = None
+    """Evaluate forward or backward model or divergence-based mixing"""
 
     def main(self) -> None:
         dtypes = {"uint8": {"dtype": np.uint8, "met": "MET_UCHAR"}, "uint16": {"dtype": np.uint16, "met": "MET_USHORT"}, "float32": {"dtype": np.float32, "met": "MET_FLOAT"}}
@@ -666,7 +668,8 @@ class ExportVolumeGrid(Exporter):
                 engine='numpy', 
                 resolution=self.resolution, 
                 target=self.target,
-                time=self.time
+                time=self.time,
+                which=self.which
             )
             densities.append(xy.squeeze())
         densities = np.stack(densities, axis=2)
