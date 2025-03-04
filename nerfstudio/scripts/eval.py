@@ -79,7 +79,7 @@ class ComputeDensityLoss:
         assert self.output_path.suffix == ".json"
         if self.render_output_path is not None:
             self.render_output_path.mkdir(parents=True, exist_ok=True)
-        metrics_dict = {key:val.item() for key,val in pipeline.calculate_density_loss().items()}
+        metrics_dict = {key:val.item() for key,val in pipeline.calculate_density_loss(sampling='grid').items()}
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
         # Get the output and define the names to save to
         benchmark_info = {
