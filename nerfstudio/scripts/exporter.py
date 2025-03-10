@@ -788,6 +788,44 @@ class ExportDeformationField(Exporter):
             displacements = np.concatenate(displacements, axis=0).squeeze()
             np.save(fn, displacements)
 
+@dataclass
+class ExportVelocityField(Exporter):
+    """Export velocity field."""
+    resolution: int = 256
+    """Resolution of spatial grid."""
+
+    def main(self) -> None:
+        if not self.output_dir.exists():
+            self.output_dir.mkdir(parents=True)
+
+        _, pipeline, _, _ = eval_setup(self.load_config)
+
+        model: Model = pipeline.model
+        model.eval()
+
+        assert hasattr(model, "deformation_field")
+        assert isinstance(model.deformation_field, Callable)
+
+        x = torch.linspace(-1, 1, self.resolution, device=model.device)
+        X,Y,Z = torch.meshgrid(x,x,x, indexing='ij')
+        pos = torch.stack([X.flatten(), Y.flatten(), Z.flatten()], dim=1) # (N, 3)
+        pos_dataset = TensorDataset(pos)
+        dataloader = DataLoader(pos_dataset, batch_size=1024*1024, shuffle=False)
+
+        t = torch.linspace(0,1,11, device=model.device).view(-1,1)
+        for ti in t:
+            fn = self.output_dir / f"deformation_t_{ti.item():.2f}.npz"
+
+            velocities = []
+            for batch in track(dataloader, description=f"Computing velocities at t={ti.item():.4g}"):
+                pos1 = batch[0].clone()
+                with torch.no_grad():
+                    u = model.deformation_field.velocity(pos1[:, 0], pos1[:, 1], pos1[:, 2], ti)
+                u = u.cpu().numpy()
+                velocities.append(u)
+            velocities = np.concatenate(velocities, axis=0).squeeze()
+            velocities = velocities.reshape((self.resolution, self.resolution, self.resolution, 3))
+            np.savez_compressed(fn, velocities)
 
 
 Commands = tyro.conf.FlagConversionOff[
@@ -800,7 +838,8 @@ Commands = tyro.conf.FlagConversionOff[
         Annotated[ExportGaussianSplat, tyro.conf.subcommand(name="gaussian-splat")],
         Annotated[ExportVolumeGrid, tyro.conf.subcommand(name="volume-grid")],
         Annotated[ExportImageStack, tyro.conf.subcommand(name="image-stack")],
-        Annotated[ExportDeformationField, tyro.conf.subcommand(name="deformation-field")]
+        Annotated[ExportDeformationField, tyro.conf.subcommand(name="deformation-field")],
+        Annotated[ExportVelocityField, tyro.conf.subcommand(name="velocity-field")],
     ]
 ]
 
