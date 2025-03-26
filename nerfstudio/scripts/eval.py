@@ -156,7 +156,7 @@ class ComputeNormedCorrelation:
             print(f'Loading obect from {fn} at time {t}')
             obj = Object.from_file(fn)
             with torch.no_grad():
-                metrics_dict[t] = {key:val.item() for key, val in pipeline.get_eval_density_loss(target=obj, npoints=self.npoints, time=t).items()}
+                metrics_dict[t] = {key:val.item() for key, val in pipeline.get_eval_density_loss(target=obj, npoints=self.npoints, time=t, sampling='grid').items()}
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
         # Get the output and define the names to save to
         benchmark_info = {
