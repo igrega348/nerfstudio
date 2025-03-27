@@ -45,10 +45,10 @@ from nerfstudio.data.datamanagers.parallel_datamanager import \
 from nerfstudio.data.datamanagers.random_cameras_datamanager import \
     RandomCamerasDataManager
 from nerfstudio.data.scene_box import OrientedBox
-from nerfstudio.exporter import texture_utils, tsdf_utils
-from nerfstudio.exporter.exporter_utils import (collect_camera_poses,
-                                                generate_point_cloud,
-                                                get_mesh_from_filename)
+# from nerfstudio.exporter import texture_utils, tsdf_utils
+# from nerfstudio.exporter.exporter_utils import (collect_camera_poses,
+#                                                 generate_point_cloud,
+#                                                 get_mesh_from_filename)
 from nerfstudio.exporter.marching_cubes import \
     generate_mesh_with_multires_marching_cubes
 from nerfstudio.fields.sdf_field import SDFField  # noqa
@@ -673,7 +673,7 @@ class ExportVolumeGrid(Exporter):
         densities = np.stack(densities, axis=2)
         densities *= (np.iinfo(dtypes[self.export_dtype]["dtype"]).max / densities.max())
         densities = densities.astype(dtypes[self.export_dtype]["dtype"])
-        print(f"Exporting volume with shape {densities.shape} and dtype {densities.dtype}")
+        print(f"Exporting {self.which} volume with shape {densities.shape} and dtype {densities.dtype} at time {self.time}")
         assert densities.shape == (self.resolution, self.resolution, self.resolution)
         
         if self.fmt=="npz":

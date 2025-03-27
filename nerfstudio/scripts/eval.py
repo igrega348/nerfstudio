@@ -153,7 +153,7 @@ class ComputeNormedCorrelation:
         # metrics_dict = {key:val.item() for key,val in pipeline.calculate_density_loss().items()}
         metrics_dict = {}
         for t, fn in zip(self.target_times, self.target_files):
-            print(f'Loading obect from {fn} at time {t}')
+            print(f'Loading object from {fn} at time {t}')
             obj = Object.from_file(fn)
             with torch.no_grad():
                 metrics_dict[t] = {key:val.item() for key, val in pipeline.get_eval_density_loss(target=obj, npoints=self.npoints, time=t, sampling='grid').items()}
