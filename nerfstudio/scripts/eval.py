@@ -42,6 +42,8 @@ class ComputePSNR:
     output_path: Path = Path("output.json")
     # Optional path to save rendered outputs to.
     render_output_path: Optional[Path] = None
+    # which model to evaluate
+    which: Literal['forward','backward','mixed'] = 'mixed'
 
     def main(self) -> None:
         """Main function."""
@@ -49,7 +51,7 @@ class ComputePSNR:
         assert self.output_path.suffix == ".json"
         if self.render_output_path is not None:
             self.render_output_path.mkdir(parents=True, exist_ok=True)
-        metrics_dict = pipeline.get_average_eval_image_metrics(output_path=self.render_output_path, get_std=True)
+        metrics_dict = pipeline.get_average_eval_image_metrics(output_path=self.render_output_path, get_std=True, which=self.which)
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
         # Get the output and define the names to save to
         benchmark_info = {
