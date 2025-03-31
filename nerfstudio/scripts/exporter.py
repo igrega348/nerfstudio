@@ -721,8 +721,8 @@ class ExportImageStack(Exporter):
     """Target to plot. Either 'field', 'datamanager', or 'both'."""
     max_density: float = 1.0
     """Maximum density for the colormap."""
-    time: Optional[float] = 0.0
-    """Time to evaluate the field at. Useful if deformation is time-dependent."""
+    times: Optional[List[float]] = field(default_factory=lambda: [0.0])
+    """Times to evaluate the field at. Useful if deformation is time-dependent."""
 
     def main(self) -> None:
         if not self.output_dir.exists():
@@ -733,21 +733,20 @@ class ExportImageStack(Exporter):
         model: Model = pipeline.model
         model.eval()
 
-        assert hasattr(model.field, "get_density_from_pos")
-
         distances = np.linspace(-1, 1, self.num_slices)
-        for i_slice in track(range(self.num_slices), description="Exporting image stack"):
-            fn = self.output_dir / f"image_{i_slice:04d}.png"
-            pipeline.eval_along_plane(
-                target=self.target,
-                plane=self.plane, 
-                distance=distances[i_slice], 
-                fn=fn, 
-                engine=self.plot_engine, 
-                resolution=self.resolution,
-                rhomax=self.max_density,
-                time=self.time
-            )
+        for t in self.times:
+            for i_slice in track(range(self.num_slices), description=f"Exporting image stack at time {t}"):
+                fn = self.output_dir / f"image_t-{t:.2f}_{self.plane}-{i_slice:04d}.png"
+                pipeline.eval_along_plane(
+                    target=self.target,
+                    plane=self.plane, 
+                    distance=distances[i_slice], 
+                    fn=fn, 
+                    engine=self.plot_engine, 
+                    resolution=self.resolution,
+                    rhomax=self.max_density,
+                    time=t
+                )
 
 @dataclass
 class ExportDeformationField(Exporter):

@@ -47,6 +47,7 @@ class ComputePSNR:
 
     def main(self) -> None:
         """Main function."""
+        CONSOLE.print(f"[underline]Evaluating {self.load_config} in {self.which} mode[/underline]")
         config, pipeline, checkpoint_path, _ = eval_setup(self.load_config)
         assert self.output_path.suffix == ".json"
         if self.render_output_path is not None:
@@ -62,7 +63,7 @@ class ComputePSNR:
         }
         # Save output to output file
         self.output_path.write_text(json.dumps(benchmark_info, indent=2), "utf8")
-        CONSOLE.print(f"Saved results to: {self.output_path}")
+        CONSOLE.print(f":white_check_mark: Saved results to: {self.output_path}")
 
 @dataclass
 class ComputeDensityLoss:
@@ -92,7 +93,7 @@ class ComputeDensityLoss:
         }
         # Save output to output file
         self.output_path.write_text(json.dumps(benchmark_info, indent=2), "utf8")
-        CONSOLE.print(f"Saved results to: {self.output_path}")
+        CONSOLE.print(f":white_check_mark: Saved results to: {self.output_path}")
 
 @dataclass
 class ComputeVolumeMismatch:
@@ -126,7 +127,7 @@ class ComputeVolumeMismatch:
         }
         # Save output to output file
         self.output_path.write_text(json.dumps(benchmark_info, indent=2), "utf8")
-        CONSOLE.print(f"Saved results to: {self.output_path}")
+        CONSOLE.print(f":white_check_mark: Saved results to: {self.output_path}")
 
 @dataclass
 class ComputeNormedCorrelation:
@@ -169,7 +170,7 @@ class ComputeNormedCorrelation:
         }
         # Save output to output file
         self.output_path.write_text(json.dumps(benchmark_info, indent=2), "utf8")
-        CONSOLE.print(f"Saved results to: {self.output_path}")
+        CONSOLE.print(f":white_check_mark: Saved results to: {self.output_path}")
 
 Commands = tyro.conf.FlagConversionOff[
     Union[
