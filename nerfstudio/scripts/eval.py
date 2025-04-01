@@ -19,9 +19,9 @@ eval.py
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Union, TypedDict, List
+from typing import Optional, Union, TypedDict, List, Tuple
 from typing_extensions import Annotated, Literal
 
 import tyro
@@ -145,6 +145,8 @@ class ComputeNormedCorrelation:
     render_output_path: Optional[Path] = None
     # number of points to evaluate
     npoints: int = 1<<20
+    # extent of the scene to evaluate
+    extent: Tuple[Tuple[float,float],Tuple[float,float],Tuple[float,float]] = field(default_factory=lambda: ((-1,1),(-1,1),(-1,1)))
 
     def main(self) -> None:
         """Main function."""
@@ -159,7 +161,10 @@ class ComputeNormedCorrelation:
             print(f'Loading object from {fn} at time {t}')
             obj = Object.from_file(fn)
             with torch.no_grad():
-                metrics_dict[t] = {key:val.item() for key, val in pipeline.get_eval_density_loss(target=obj, npoints=self.npoints, time=t, sampling='grid').items()}
+                metrics_dict[t] = pipeline.get_eval_density_loss(target=obj, npoints=self.npoints, time=t, sampling='grid', extent=self.extent, batch_size=1<<20)
+                for key, val in metrics_dict[t].items():
+                    if isinstance(val, torch.Tensor):
+                        metrics_dict[t][key] = val.item()
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
         # Get the output and define the names to save to
         benchmark_info = {
@@ -167,6 +172,7 @@ class ComputeNormedCorrelation:
             "method_name": config.method_name,
             "checkpoint": str(checkpoint_path),
             "results": metrics_dict,
+            "extent": self.extent,
         }
         # Save output to output file
         self.output_path.write_text(json.dumps(benchmark_info, indent=2), "utf8")
