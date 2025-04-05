@@ -148,7 +148,7 @@ class ExportVolumeGrid(Exporter):
         assert densities.shape == (self.resolution, self.resolution, self.resolution)
         
         if self.fmt=="npz":
-            np.savez(self.output_dir / "volume.npz", vol=densities)
+            np.savez_compressed(self.output_dir / "volume.npz", vol=densities)
             return
         elif self.fmt=="npy":
             np.save(self.output_dir / "volume.npy", densities)
